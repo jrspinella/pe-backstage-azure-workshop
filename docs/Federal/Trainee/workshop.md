@@ -489,41 +489,6 @@ const app = createApp({
 
 You have completed the first lab. You have created a new Backstage app and explored the app.
 
-# Module 2 - Lab 2 - Infrastructure as Code
-
-In this lab, we will deploy Infrastructure as Code (IaC). We will use Terraform to define the infrastructure and deploy it to Azure.
-
-## Deploy Infrastructure as Code
-
-To deploy the infrastructure, you need to have Terraform installed on your machine.
-
-<div class="tip" data-title="Tips">
-
-> You should have downloaded Terraform, if not please review the [Pre-requisites](#pre-requisites) section.<br>
-
-</div>
-
-Once you have Terraform installed, you can define the infrastructure in a Terraform configuration file. The configuration file should include all the necessary resources and configurations for the infrastructure.
-
-You can then use the `terraform apply` command to deploy the infrastructure to Azure. Terraform will create all the necessary resources and configurations based on the configuration file.
-
-<details>
-
-<summary>📚 Toggle solution</summary>
-
-```shell
-# Initialize Terraform
-terraform init
-
-# Plan the deployment
-terraform plan
-
-# Deploy the infrastructure
-terraform apply
-```
-
-</details>
-
 # Module 3 - Lab 3 - Path Paths
 
 In this lab, we will discuss how to implement paved paths in Backstage. Paved paths are predefined paths that provide a set of best practices and configurations for specific types of applications.
