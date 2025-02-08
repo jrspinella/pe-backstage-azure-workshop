@@ -368,28 +368,121 @@ Because we are still in the development mode, any changes to the `app-config.yam
 
 </div>
 
-## Step 4 - Add GitHub Auth Integration
+## Step 4 - Add GitHub Organization
+
+In order to use the full potential of Backstage, you need to add a GitHub organization to the app. This will allow you to use the GitHub integration to fetch data from your GitHub repositories.
+
+To add a GitHub organization, follow these steps:
+
+1. Go to Github.com and click on your profile picture in the top right corner.
+2. Go to 'Your organizations'
+![github-org-profile](./assets/lab1-backstage/github-org-1.png)
+3. You will be at your organizations list, click on 'New organization' in the top right corner of the screen.
+4. Click Free Organization.
+![github-org-free0org](./assets/lab1-backstage/github-org-2.png)
+5. Enter a name for your organization, email, set to personal account and click 'Next'.
+
+We will use this organization in the next labs to authenicate and fetch data from GitHub from Backstage.
+
+## Step 5 - Add GitHub Auth Integration
 
 The Backstage `core-plugin-api` package comes with a Microsoft authentication provider that can authenticate users using GitHub or GitHub Enterprise OAuth.
 
-### Create an OAuth App on GitHub
+### Create an OAuth App for your GitHub Organization
 
-To add GitHub authentication, you must create either a GitHub App, or an OAuth App from the GitHub developer settings. The Homepage URL should point to Backstage's frontend, while the Authorization callback URL will point to the auth backend.
+To add GitHub authentication to Backstage, you must create either a GitHub App, or an OAuth App from the GitHub developer settings. The Homepage URL should point to Backstage's frontend, while the Authorization callback URL will point to the auth backend.
 
-Note that if you're using a GitHub App, the allowed scopes are configured as part of that app. This means you need to verify what scopes the plugins you use require, so be sure to check the plugin READMEs for that information.
+#### Using the CLI (public GitHub only)
 
-Settings for local development:
+To create an OAuth App on GitHub in your Organization, follow these steps:
 
-- **Application name**: Backstage (or your custom app name)
+You can use the backstage-cli to create a GitHub App using a manifest file that we provide. This gives us a way to automate some of the work required to create a GitHub app.
+
+```shell
+yarn backstage-cli create-github-app <github org>
+```
+
+This command will guide you through the process of creating a GitHub App. You will be asked to provide the following information:
+
+- **Select permissions:** Select 'A' for all permissions.
+
+![github-app-cli](./assets/lab1-backstage/github-app-cli.png)
+
+A new window will open in your browser where you can create the GitHub App. Fill in the form with the following values:
+
+- **GitHub App name:** Backstage-'<'your org name'>'
+
+![github-app-name](./assets/lab1-backstage/github-app-name.png)
+
+Once you've gone through the CLI command, it should produce a YAML file in the root of the project which you can then use as an include in your app-config.yaml.
+
+#### Including in Integrations Config
+
+You can include the generated GitHub App configuration in your app-config.yaml file like this:
+
+```yaml
+integrations:
+  github:
+    - host: github.com
+      apps:
+        - $include: example-backstage-app-credentials.yaml
+```
+
+<div class="note" data-title="Note">
+
+> Please note that the credentials file is highly sensitive and should NOT be checked into any kind of version control. Instead use your preferred secure method of distributing secrets.
+
+</div>
+
+#### Adding the GitHub App to Backstage
+
+Now we need to make sure the GitHub app is able to access Backstage.
+
+Fill in the form with the following values in the Github App settings:
+
 - **Homepage URL:** http://localhost:3000
 - **Authorization callback URL:** http://localhost:7007/api/auth/github/handler/frame
+
+Click on the `Save changes` button.
+
+#### Configuring App permissions
+
+The GitHub App permissions can be configured in the GitHub App settings. Which is located at `https://github.com/organizations/{ORG}/settings/apps/{APP_NAME}/permissions` or clicking on the `Permissions & events` tab in the GitHub App settings.
+
+The permissions required for the GitHub App to work with Backstage are:
+
+**Reading software components:**
+
+- Contents: Read-only
+- Commit statuses: Read-only
+
+**Reading organization data:**
+
+- Members: Read-only
+
+**Publishing software templates:**
+
+- Administration: Read & write (for creating repositories)
+- Contents: Read & write
+- Metadata: Read-only
+- Pull requests: Read & write
+- Issues: Read & write
+- Workflows: Read & write (if templates include GitHub workflows)
+- Variables: Read & write (if templates include GitHub Action Repository Variables)
+- Secrets: Read & write (if templates include GitHub Action Repository Secrets)
+- Environments: Read & write (if templates include GitHub Environments)
+
+<div class="note" data-title="Note">
+
+> If you're using a GitHub App, the allowed scopes are configured as part of that app. This means you need to verify what scopes the plugins you use require, so be sure to check the plugin READMEs for that information.
+
+</div>
 
 ### Configure GitHub Auth in Backstage
 
 The provider configuration can then be added to your app-config.yaml under the root auth configuration:
 
 ```yaml
-
 auth:
   environment: development
   providers:
@@ -414,7 +507,7 @@ The GitHub provider is a structure with these configuration keys:
 - **callbackUrl (optional):** The callback URL that GitHub will use when initiating an OAuth flow, e.g. https://your-intermediate-service.com/handler. Only needed if Backstage is not the immediate receiver (e.g. one OAuth app for many backstage instances).
 - **signIn:** The configuration for the sign-in process, including the resolvers that should be used to match the user from the auth provider with the user entity in the Backstage catalog (typically a single resolver is sufficient).
 
-### GitHub Resolvers
+#### GitHub Resolvers
 
 This provider includes several resolvers out of the box that you can use:
 
@@ -430,35 +523,23 @@ This provider includes several resolvers out of the box that you can use:
 
 ### Backend Installation
 
-To add the provider to the backend we will first need to install the package by running this command:
+To add the provider to the backend we will first need to install the package by running this command from your **Backstage root directory**:
 
 ```typescript
-
-from your Backstage root directory
-
 yarn --cwd packages/backend add @backstage/plugin-auth-backend-module-github-provider
-
 ```
 
-Then we will need to this line:
+Then we will need to add this line in **packages/backend/src/index.ts**:
 
 ```typescript
-
-in packages/backend/src/index.ts
-
-backend.add(import('@backstage/plugin-auth-backend'));
 backend.add(import('@backstage/plugin-auth-backend-module-github-provider'));
-
 ```
 
 ### Adding the provider to the Backstage frontend
 
-To add the provider to the frontend we will first need to install the package by running this command:
+Now that the backend is set up, you can add the GitHub provider to the frontend. This is done by adding the provider to the SignInPage component in the app. The SignInPage component is a component that is used to sign in to the app. Add the following code in **packages/app/src/App.tsx**:
 
 ```typescript
-
-in packages/app/src/App.tsx
-
 import { githubAuthApiRef } from '@backstage/core-plugin-api';
 import { SignInPage } from '@backstage/core-components';
 
@@ -487,47 +568,171 @@ const app = createApp({
 
 </div>
 
+The next step is to change the authentication backend module. The GitHub auth response has specific parameters, and you need to map them to known values for Backstage. The auth.ts script is responsible for handling the information obtained from the auth provider.
+
+The following example code reads the email from the response and then blocks the user’s access if the domain is not part of your organization.
+
+Create a new file named **auth.ts** in the **packages/backend/src directory** and add the following code:
+
+```typescript
+import { AuthProviderConfig, OAuthProviderHandlers } from '@backstage/plugin-auth-backend';
+import { OAuthProvider } from '@backstage/plugin-auth-backend-node';
+
+export const createOAuthProvider = (config: AuthProviderConfig) => {
+  const provider = new OAuthProvider({
+    clientId: config.clientId,
+    clientSecret: config.clientSecret,
+    callbackUrl: config.callbackUrl,
+    providerInfo: {
+      id: 'github',
+      title: 'GitHub',
+    },
+  });
+
+  const handlers: OAuthProviderHandlers = {
+    async startAuth(req, options) {
+      return provider.start(req, options);
+    },
+    async handler(req) {
+      return provider.handler(req);
+    },
+  };
+
+  return { provider, handlers };
+};
+```
+
+<div class="note" data-title="Note">
+
+> The OAuthProvider class is a wrapper around the passport-oauth2 strategy, and it is responsible for handling the OAuth flow.
+
+</div>
+
+### Adding GitHub Organizational Data
+
+The GitHub provider can also be configured to fetch organizational data from GitHub. This data can be used to filter the users that are allowed to sign in to Backstage. 
+
+This can be done by adding the **@backstage/plugin-catalog-backend-module-github-org** package to your backend.
+
+### Backend Installation
+
+The package is not installed by default, therefore you have to add **@backstage/plugin-catalog-backend-module-github-org** to your backend package.
+
+Run the following command from your **Backstage root directory**:
+
+```typescript
+yarn --cwd packages/backend add @backstage/plugin-catalog-backend-module-github-org
+```
+
+Next add the basic configuration to the **app-config.yaml** file:
+
+```yaml
+catalog:
+  providers:
+    githubOrg:
+      id: production
+      githubUrl: https://github.com
+      orgs: ['<Your Org Name>']
+      schedule:
+        initialDelay: { seconds: 30 }
+        frequency: { hours: 1 }
+        timeout: { minutes: 50 }
+```
+
+Finally, update your backend by adding to **packages/backend/src/index.ts**  following line:
+
+```typescript
+backend.add(import('@backstage/plugin-catalog-backend-module-github-org'));
+```
+
 You have completed the first lab. You have created a new Backstage app and explored the app.
 
-# Module 3 - Lab 3 - Path Paths
+# Module 4 - Lab 3 - Paved Paths
 
 In this lab, we will discuss how to implement paved paths in Backstage. Paved paths are predefined paths that provide a set of best practices and configurations for specific types of applications.
 
-## Step 1 - Add Microsoft Entra ID Catalog Integration
+Paved paths can be used to create new projects based on predefined templates. These templates can include configuration files, code snippets, and other resources that help developers get started quickly with a new project.
 
-The Backstage catalog can be set up to ingest organizational data - users and teams - directly from a tenant in Microsoft Entra ID via the Microsoft Graph API.
+## Step 1 - Add GitHub Catalog Integration
+
+The GitHub integration has a discovery provider for discovering catalog entities within a GitHub organization. The provider will crawl the GitHub organization and register entities matching the configured path. This can be useful as an alternative to static locations or manually adding things to the catalog. This is the preferred method for ingesting entities into the catalog.
+
+ This can be done by adding the **@backstage/plugin-catalog-backend-module-github** package to your backend.
 
 ### Installation
 
-The package is not installed by default, therefore you have to add @backstage/plugin-catalog-backend-module-msgraph to your backend package.
+The package is not installed by default, therefore you have to add **@backstage/plugin-catalog-backend-module-github** to your backend package.
+
+Run the following command from your **Backstage root directory**:
 
 ```typescript
-
-from your Backstage root directory
-
-yarn --cwd packages/backend add @backstage/plugin-catalog-backend-module-msgraph
+yarn --cwd packages/backend add @backstage/plugin-catalog-backend-module-github
 ```
 
-Next add the basic configuration to app-config.yaml
+Next add the basic configuration to the **app-config.yaml** file:
 
 ```yaml
-
 catalog:
   providers:
-    microsoftGraphOrg:
-      default:
-        tenantId: ${AZURE_TENANT_ID}
-        user:
-          filter: accountEnabled eq true and userType eq 'member'
-        group:
-          filter: >
-            securityEnabled eq false
-            and mailEnabled eq true
-            and groupTypes/any(c:c+eq+'Unified')
-        schedule:
-          frequency: PT1H
-          timeout: PT50M
-
+    github:
+      # the provider ID can be any camelCase string
+      providerId:
+        organization: '<Your Org Name>' # string
+        catalogPath: '/catalog-info.yaml' # string
+        filters:
+          branch: 'main' # string
+          repository: '.*' # Regex
+        schedule: # same options as in SchedulerServiceTaskScheduleDefinition
+          # supports cron, ISO duration, "human duration" as used in code
+          frequency: { minutes: 30 }
+          # supports ISO duration, "human duration" as used in code
+          timeout: { minutes: 3 }
+      customProviderId:
+        organization: 'new-org' # string
+        catalogPath: '/custom/path/catalog-info.yaml' # string
+        filters: # optional filters
+          branch: 'develop' # optional string
+          repository: '.*' # optional Regex
+      wildcardProviderId:
+        organization: 'new-org' # string
+        catalogPath: '/groups/**/*.yaml' # this will search all folders for files that end in .yaml
+        filters: # optional filters
+          branch: 'develop' # optional string
+          repository: '.*' # optional Regex
+      topicProviderId:
+        organization: 'backstage' # string
+        catalogPath: '/catalog-info.yaml' # string
+        filters:
+          branch: 'main' # string
+          repository: '.*' # Regex
+          topic: 'backstage-exclude' # optional string
+      topicFilterProviderId:
+        organization: 'backstage' # string
+        catalogPath: '/catalog-info.yaml' # string
+        filters:
+          branch: 'main' # string
+          repository: '.*' # Regex
+          topic:
+            include: ['backstage-include'] # optional array of strings
+            exclude: ['experiments'] # optional array of strings
+      validateLocationsExist:
+        organization: 'backstage' # string
+        catalogPath: '/catalog-info.yaml' # string
+        filters:
+          branch: 'main' # string
+          repository: '.*' # Regex
+        validateLocationsExist: true # optional boolean
+      visibilityProviderId:
+        organization: 'backstage' # string
+        catalogPath: '/catalog-info.yaml' # string
+        filters:
+          visibility:
+            - public
+            - internal
+      enterpriseProviderId:
+        host: ghe.example.net
+        organization: 'backstage' # string
+        catalogPath: '/catalog-info.yaml' # string
 ```
 
 <div class="task" data-title="Task">
@@ -538,14 +743,10 @@ catalog:
 
 </div>
 
-Finally, updated your backend by adding the following line:
+Finally, updated your backend by adding the following line in **packages/backend/src/index.ts**:
 
 ```typescript
-
-in packages/backend/src/index.ts
-
-backend.add(import('@backstage/plugin-catalog-backend'));
-backend.add(import('@backstage/plugin-catalog-backend-module-msgraph'));
+backend.add(import('@backstage/plugin-catalog-backend-module-github'));
 ```
 
 ## Step 2 - Add GitHub Integration to Backstage
@@ -560,3 +761,40 @@ In Backstage, paved paths can be implemented using the scaffolder plugin. The sc
 To implement paved paths in Backstage, you can create a new template in the `examples/template` directory. The template should include all the necessary configuration and best practices for a specific type of application.
 
 You can then use the scaffolder plugin to generate new projects based on the template. The scaffolder plugin will create a new project in the `packages` directory with all the necessary configuration and best practices.
+
+# Module 5 - Lab 3 - Everything as Code
+
+In this lab, we will show you how to use Everything as Code in Backstage. **Everything as Code** is a concept that allows you to define your infrastructure, configuration, and application code in a declarative way using code.
+
+We will be doing a couple of things in this lab:
+
+1. Define Infrastructure as Code for deployment of Backstage on Azure
+2. Define Configuration as Code for the management of Backstage configuration
+3. Define Documentation as Code for the management of Backstage documentation
+
+## Step 1 - Define Infrastructure as Code for deployment of Backstage
+
+In this step, we will define the infrastructure as code for the deployment of Backstage on Azure. We will use Terraform to define the infrastructure as code.
+
+We will use the docker file that comes with the Backstage app to create a Docker image and deploy it to Azure. We will then create a Kubernetes cluster on Azure and deploy the Docker image to the cluster.
+
+### Create a Terraform Configuration File
+
+Create a new Terraform configuration file named `main.tf` in the root directory of your Backstage project. Add the following code to the file:
+
+```hcl
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "example" {
+  name     = "example-resources"
+  location = "East US"
+}
+```
+
+This code defines an Azure resource group named `example-resources` in the `East US` region.
+
+
+
+# Module 6 - Lab 3 - Self-Service Infrastructure
