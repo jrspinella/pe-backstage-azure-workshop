@@ -25,9 +25,9 @@ tags: azure policies, azure deployment environment, backstage, github advanced s
 
 # Hands-on Lab - Platform engineering for Federal with BackStage
 
-Welcome to this Platform engineering for Federal Workshop. In order to comprehend real-world situations, you will be testing with Azure services in several labs.
-You will be able to learn how to deploy and manage Azure resources, as well as how to use Azure services to build and deploy applications with the help of GitHub and Backstage.
-Don't worry; you will be walked through the entire procedure in this step-by-step lab.
+Welcome to this Platform engineering for Federal Workshop. At its core, platform engineering is about constructing a solid and adaptable groundwork that simplifies and accelerates the development, deployment, and operation of software applications. The goal is to abstract the complexity inherent in managing infrastructure and operational concerns, enabling dev teams to focus on crafting code that adds direct value to the mission.
+
+In order to comprehend real-world situations, you will be testing with Azure services in several labs. You will be able to learn how to deploy and manage Azure resources, as well as how to use Azure services to build and deploy applications with the help of GitHub and Backstage. Don't worry; you will be walked through the entire procedure in this step-by-step lab.
 
 You will receive guidance on how to do each step throughout this workshop. You will be able to test your knowledge and skills by completing the labs.
 Before seeing the solutions listed under the provided resources and links, it is advised to look at the solutions placed under the '📚 Toggle solution' panel.
@@ -608,7 +608,9 @@ backend.add(import('@backstage/plugin-catalog-backend-module-github-org'));
 
 You have completed the first lab. You have created a new Backstage app and explored the app.
 
-# Module 4 - Lab 2 - Paved Paths
+# Module 3 - Lab 2 - Deploy Kubernetes Cluster on Azure
+
+# Module 4 - Lab 3 - Paved Paths
 
 In this lab, we will discuss how to implement paved paths in Backstage. Paved paths are predefined paths that provide a set of best practices and configurations for specific types of applications.
 
@@ -723,7 +725,7 @@ To implement paved paths in Backstage, you can create a new template in the `exa
 
 You can then use the scaffolder plugin to generate new projects based on the template. The scaffolder plugin will create a new project in the `packages` directory with all the necessary configuration and best practices.
 
-# Module 5 - Lab 3 - Everything as Code
+# Module 5 - Lab 4 - Everything as Code
 
 In this lab, we will show you how to use Everything as Code in Backstage. **Everything as Code** is a concept that allows you to define your infrastructure, configuration, and application code in a declarative way using code.
 
@@ -733,11 +735,21 @@ We will be doing a couple of things in this lab:
 2. Define Configuration as Code for the management of Backstage configuration
 3. Define Documentation as Code for the management of Backstage documentation
 
-## Step 1 - Define Infrastructure as Code for deployment of Backstage
+## Step 1 - Deploying Backstage to AKS with Infrastructure as Code
 
 In this step, we will define the infrastructure as code for the deployment of Backstage on Azure. We will use Terraform to define the infrastructure as code.
 
 We will use the docker file that comes with the Backstage app to create a Docker image and deploy it to Azure. We will then create a Kubernetes cluster on Azure and deploy the Docker image to the cluster.
+
+### Create a New VS Code Project
+
+Create a new VS Code project in the root directory of your Backstage project.
+
+Add the following files to the project to start defining the infrastructure as code:
+
+- `main.tf`: The main Terraform configuration file
+- `variables.tf`: The Terraform variables file
+- `outputs.tf`: The Terraform outputs file
 
 ### Create a Terraform Configuration File
 
@@ -758,7 +770,7 @@ This code defines an Azure resource group named `example-resources` in the `East
 
 
 
-# Module 6 - Lab 4 - Self-Service Infrastructure
+# Module 6 - Lab 5 - Self-Service Infrastructure
 
 # Closing the workshop
 
