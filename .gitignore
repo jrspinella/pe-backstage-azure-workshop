@@ -21,3 +21,17 @@ lerna-debug.log*
 
 # OS
 .DS_Store
+
+# Compiled files
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.tfplan
+
+**/.terraform.lock.hcl
+**/.terraform.tfstate.lock.info
+
+# Terraform directory
+.terraform/
+terraform.tfstate.d/
+logs/
