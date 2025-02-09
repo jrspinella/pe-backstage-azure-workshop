@@ -6,10 +6,10 @@ short_title: Platform Engineering for Federal with BackStage      # Optional. Sh
 description: This workshop will cover the...  # Required.
 level: intermediate                     # Required. Can be 'beginner', 'intermediate' or 'advanced'
 authors:                                # Required. You can add as many authors as needed      
-  - John Spinella
+  - John Spinella, Steve St Jean, John Scott, Matthew Ross
 contacts:                               # Required. Must match the number of authors
-  - Author's email, Twitter...
-duration_minutes: 20                    # Required. Estimated duration in minutes
+  - "@jrspinella"
+duration_minutes: 150                    # Required. Estimated duration in minutes
 tags: azure policies, azure deployment environment, backstage, github advanced security, microsoft dev box, dev center, azure, github, ops, federal csu          # Required. Tags for filtering and searching
 #banner_url: assets/banner.jpg           # Optional. Should be a 1280x640px image
 #video_url: https://youtube.com/link     # Optional. Link to a video of the workshop
@@ -44,13 +44,16 @@ Before seeing the solutions listed under the provided resources and links, it is
 Before starting this lab, be sure to set your Azure environment :
 
 - An Azure Subscription with the **Owner** role to create and manage the labs' resources and deploy the infrastructure as code
-- Register the Azure providers on your Azure Subscription if not done yet: `Microsoft.KeyVault`, `Microsoft.ApiManagement`, `Microsoft.Web`, `Microsoft.App`.
+- Register the Azure providers on your Azure Subscription if not done yet: `Microsoft.KeyVault`, `Microsoft.Web`, `Microsoft.App`.
+- Install the `Azure CLI` on your local machine or use the Azure Cloud Shell
+- Install `Terraform` on your local machine
+- A `GitHub account` to create a GitHub App and use the GitHub integration in Backstage
 
 To be able to do the lab content you will also need:
 
 - Basic understanding of Azure resources.
 - A Github account (Free, Team or Enterprise)
-- Create a [fork][repo-fork] of the repository from the **main** branch to help you keep track of your potential changes
+- Create a [fork](https://github.com/join) of the repository from the **main** branch to help you keep track of your potential changes
 
 
 3 development options are available:
@@ -69,49 +72,50 @@ To be able to do the lab content you will also need:
 ### 🥇 : Pre-configured GitHub Codespace
 
 To use a Github Codespace, you will need :
-- [A GitHub Account][github-account]
+- [A GitHub Account](https://github.com/join)
 
-Github Codespace offers the ability to run a complete dev environment (Visual Studio Code, Extensions, Tools, Secure port forwarding etc.) on a dedicated virtual machine. 
-The configuration for the environment is defined in the `.devcontainer` folder, making sure everyone gets to develop and practice on identical environments : No more conflict on dependencies or missing tools ! 
+Github Codespace offers the ability to run a complete dev environment (Visual Studio Code, Extensions, Tools, Secure port forwarding etc.) on a dedicated virtual machine.
+The configuration for the environment is defined in the `.devcontainer` folder, making sure everyone gets to develop and practice on identical environments : No more conflict on dependencies or missing tools !
 
 Every Github account (even the free ones) grants access to 120 vcpu hours per month, _**for free**_. A 2 vcpu dedicated environment is enough for the purpose of the lab, meaning you could run such environment for 60 hours a month at no cost!
 
-To get your codespace ready for the labs, here are a few steps to execute : 
+To get your codespace ready for the labs, here are a few steps to execute :
+
 - Start by forking the repository. Click on `Fork` and get a new copy of the repository which is now yours and that you can edit at your will.
 - After you forked the repo, click on `<> Code`, `Codespaces` tab and then click on the `+` button:
 
-![codespace-new](../../assets/lab0-prerequisites/codespace-new.png)
+![codespace-new](./assets/lab0-prerequisites/codespace-new.png)
 
 - You can also provision a beefier configuration by defining creation options and select the **Machine Type** you like: 
 
-![codespace-configure](../../assets/lab0-prerequisites/codespace-configure.png)
+![codespace-configure](./assets/lab0-prerequisites/codespace-configure.png)
 
 ### 🥈 : Using a local Devcontainer
 
 This repo comes with a Devcontainer configuration that will let you open a fully configured dev environment from your local Visual Studio Code, while still being completely isolated from the rest of your local machine configuration : No more dependency conflict.
-Here are the required tools to do so : 
+Here are the required tools to do so :
 
-- [Git client][git-client] 
-- [Docker Desktop][docker-desktop] running
-- [Visual Studio Code][vs-code] installed
+- [Git client](https://git-scm.com/downloads)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) running
+- [Visual Studio Code](https://code.visualstudio.com/) installed
 
 Start by cloning the Hands-on Lab Platform engineering for Federal repo you just forked on your local Machine and open the local folder in Visual Studio Code.
 Once you have cloned the repository locally, make sure Docker Desktop is up and running and open the cloned repository in Visual Studio Code.  
 
-You will be prompted to open the project in a Dev Container. Click on `Reopen in Container`. 
+You will be prompted to open the project in a Dev Container. Click on `Reopen in Container`.
 
 If you are not prompted by Visual Studio Code, you can open the command palette (`Ctrl + Shift + P`) and search for `Reopen in Container` and select it: 
 
-![devcontainer-reopen](../../assets/lab0-prerequisites/devcontainer-reopen.png)
+![devcontainer-reopen](./assets/lab0-prerequisites/devcontainer-reopen.png)
 
 ### 🥉 : Using your own local environment
 
 The following tools and access will be necessary to run the lab in good conditions on a local environment :  
 
-- [Git client][git-client] 
-- [Visual Studio Code][vs-code] installed (you will use Dev Containers)
-- [Azure CLI][az-cli-install] installed on your machine
-- [Terraform][terraform-install] installed, this will be used for deploying the resources on Azure
+- [Git client](https://git-scm.com/downloads)
+- [Visual Studio Code](https://code.visualstudio.com/) installed (you will use Dev Containers)
+- [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) installed on your machine
+- [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli) installed, this will be used for deploying the resources on Azure
 
 Once you have set up your local environment, you can clone the Hands-on Lab Platform engineering for Federal repo you just forked on your machine, and open the local folder in Visual Studio Code and head to the next step. 
 
@@ -119,7 +123,7 @@ Once you have set up your local environment, you can clone the Hands-on Lab Plat
 
 <div class="task" data-title="Task">
 
-> - Log into your Azure subscription in your environment using Azure CLI and on the [Azure Portal][az-portal] using your credentials.
+> - Log into your Azure subscription in your environment using Azure CLI and on the [Azure Portal](https://portal.azure.com/) using your credentials.
 
 </div>
 
@@ -143,12 +147,8 @@ az account set --subscription <subscription-id>
 
 # Register the following Azure providers if they are not already
 
-# Microsoft DevCenter
-az provider register --namespace 'Microsoft.DevCenter'
 # Azure Key Vault
 az provider register --namespace 'Microsoft.KeyVault'
-# Azure API Management
-az provider register --namespace 'Microsoft.ApiManagement'
 # Azure Functions & Azure Web Apps
 az provider register --namespace 'Microsoft.Web'
 # Azure Container Apps
@@ -159,15 +159,15 @@ az provider register --namespace 'Microsoft.App'
 
 # Module 2 - Lab 1 - Install Backstage
 
-In this lab, we will initialize the standalone app for the moment. In the later labs we will add an external database to it and deploy it to Azure. As well as, do some configurarion to make it work with Azure and GitHub.
+In this lab, we will initialize the standalone app for the moment. In the later labs, we will add an external database to it and deploy it to Azure. As well as, do some configurarion to make it work with Azure and GitHub.
 
-To get set up quickly with your own Backstage project you can create a Backstage App.
+To get set up quickly with your own Backstage project you can create a Backstage App. We will run Backstage locally and configure the app.
 
 A Backstage App is a monorepo setup with `lerna` that includes everything you need to run Backstage in your own environment.
 
 ## Step 1 - Create a Backstage App
 
-Backstage provides a utility for creating new apps. It guides you through the initial setup of selecting the name of the app and a database for the backend. The database options are either `SQLite` or `PostgreSQL`, where the latter requires you to set up a separate database instance.
+Backstage provides a utility for creating new apps. It guides you through the initial setup of selecting the name of the app and a database for the backend.
 
 To create a new app, run the following command:
 
@@ -182,8 +182,7 @@ npx @backstage/create-app@latest
 npx @backstage/create-app@latest
 ```
 
-If prompted, enter a name for the app. This will be the name of the directory that is created. I suggest to
-use `backstage`
+If prompted, enter a name for the app. This will be the name of the directory that is created. We suggest to use `backstage`
 
 ```shell
 ? Enter a name for the app [required] backstage
@@ -351,7 +350,7 @@ yarn dev
 
 Let's have a look on some of the values in the different files and change them to your needs.
 
-![backstage-home](./assets/lab1-backstage/backstage-home.png)
+![backstage-home](./assets/lab1-installbackstage/backstage-home.png)
 
 First we change the name of our organization in the `app-config.yaml` file. Open the file and change the organization name to a name of your choice.
 
@@ -376,17 +375,17 @@ To add a GitHub organization, follow these steps:
 
 1. Go to Github.com and click on your profile picture in the top right corner.
 2. Go to 'Your organizations'
-![github-org-profile](./assets/lab1-backstage/github-org-1.png)
+![github-org-profile](./assets/lab1-installbackstage/github-org-1.png)
 3. You will be at your organizations list, click on 'New organization' in the top right corner of the screen.
 4. Click Free Organization.
-![github-org-free0org](./assets/lab1-backstage/github-org-2.png)
+![github-org-free0org](./assets/lab1-installbackstage/github-org-2.png)
 5. Enter a name for your organization, email, set to personal account and click 'Next'.
 
 We will use this organization in the next labs to authenicate and fetch data from GitHub from Backstage.
 
 ## Step 5 - Add GitHub Auth Integration
 
-The Backstage `core-plugin-api` package comes with a Microsoft authentication provider that can authenticate users using GitHub or GitHub Enterprise OAuth.
+The Backstage `core-plugin-api` package comes with a Microsoft authentication provider that can authenticate users using GitHub or GitHub Enterprise OAuth. This provider can be configured to use a GitHub App or an OAuth App. In this lab, we will use an OAuth App.
 
 ### Create an OAuth App for your GitHub Organization
 
@@ -406,15 +405,17 @@ This command will guide you through the process of creating a GitHub App. You wi
 
 - **Select permissions:** Select 'A' for all permissions.
 
-![github-app-cli](./assets/lab1-backstage/github-app-cli.png)
+![github-app-cli](./assets/lab1-installbackstage/github-app-cli.png)
 
 A new window will open in your browser where you can create the GitHub App. Fill in the form with the following values:
 
 - **GitHub App name:** Backstage-'<'your org name'>'
 
-![github-app-name](./assets/lab1-backstage/github-app-name.png)
+![github-app-name](./assets/lab1-installbackstage/github-app-name.png)
 
 Once you've gone through the CLI command, it should produce a YAML file in the root of the project which you can then use as an include in your app-config.yaml.
+
+![github-app-name](./assets/lab1-installbackstage/github-app-creds.png)
 
 #### Including in Integrations Config
 
@@ -428,7 +429,7 @@ integrations:
         - $include: example-backstage-app-credentials.yaml
 ```
 
-<div class="note" data-title="Note">
+<div class="tip" data-title="Tips">
 
 > Please note that the credentials file is highly sensitive and should NOT be checked into any kind of version control. Instead use your preferred secure method of distributing secrets.
 
@@ -472,7 +473,7 @@ The permissions required for the GitHub App to work with Backstage are:
 - Secrets: Read & write (if templates include GitHub Action Repository Secrets)
 - Environments: Read & write (if templates include GitHub Environments)
 
-<div class="note" data-title="Note">
+<div class="tip" data-title="Tips">
 
 > If you're using a GitHub App, the allowed scopes are configured as part of that app. This means you need to verify what scopes the plugins you use require, so be sure to check the plugin READMEs for that information.
 
@@ -515,7 +516,7 @@ This provider includes several resolvers out of the box that you can use:
 - **emailLocalPartMatchingUserEntityName:** Matches the local part of the email address from the auth provider with the User entity that has a matching name. If no match is found it will throw a NotFoundError.
 - **usernameMatchingUserEntityName:** Matches the username from the auth provider with the User entity that has a matching name. If no match is found it will throw a NotFoundError.
 
-<div class="note" data-title="Note">
+<div class="tip" data-title="Tips">
 
 > The resolvers will be tried in order, but will only be skipped if they throw a NotFoundError.
 
@@ -562,55 +563,15 @@ const app = createApp({
 });
 ```
 
-<div class="note" data-title="Note">  
+<div class="tip" data-title="Tips">
 
 > You can configure sign-in to use a redirect flow with no pop-up by adding enableExperimentalRedirectFlow: true to the root of your app-config.yaml
 
 </div>
 
-The next step is to change the authentication backend module. The GitHub auth response has specific parameters, and you need to map them to known values for Backstage. The auth.ts script is responsible for handling the information obtained from the auth provider.
-
-The following example code reads the email from the response and then blocks the user’s access if the domain is not part of your organization.
-
-Create a new file named **auth.ts** in the **packages/backend/src directory** and add the following code:
-
-```typescript
-import { AuthProviderConfig, OAuthProviderHandlers } from '@backstage/plugin-auth-backend';
-import { OAuthProvider } from '@backstage/plugin-auth-backend-node';
-
-export const createOAuthProvider = (config: AuthProviderConfig) => {
-  const provider = new OAuthProvider({
-    clientId: config.clientId,
-    clientSecret: config.clientSecret,
-    callbackUrl: config.callbackUrl,
-    providerInfo: {
-      id: 'github',
-      title: 'GitHub',
-    },
-  });
-
-  const handlers: OAuthProviderHandlers = {
-    async startAuth(req, options) {
-      return provider.start(req, options);
-    },
-    async handler(req) {
-      return provider.handler(req);
-    },
-  };
-
-  return { provider, handlers };
-};
-```
-
-<div class="note" data-title="Note">
-
-> The OAuthProvider class is a wrapper around the passport-oauth2 strategy, and it is responsible for handling the OAuth flow.
-
-</div>
-
 ### Adding GitHub Organizational Data
 
-The GitHub provider can also be configured to fetch organizational data from GitHub. This data can be used to filter the users that are allowed to sign in to Backstage. 
+The GitHub provider can also be configured to fetch organizational data from GitHub. This data can be used to filter the users that are allowed to sign in to Backstage.
 
 This can be done by adding the **@backstage/plugin-catalog-backend-module-github-org** package to your backend.
 
@@ -647,7 +608,7 @@ backend.add(import('@backstage/plugin-catalog-backend-module-github-org'));
 
 You have completed the first lab. You have created a new Backstage app and explored the app.
 
-# Module 4 - Lab 3 - Paved Paths
+# Module 4 - Lab 2 - Paved Paths
 
 In this lab, we will discuss how to implement paved paths in Backstage. Paved paths are predefined paths that provide a set of best practices and configurations for specific types of applications.
 
@@ -797,4 +758,17 @@ This code defines an Azure resource group named `example-resources` in the `East
 
 
 
-# Module 6 - Lab 3 - Self-Service Infrastructure
+# Module 6 - Lab 4 - Self-Service Infrastructure
+
+# Closing the workshop
+
+Once you're done with this lab you can delete the resource group you created at the beginning.
+
+To do so, click on `delete resource group` in the Azure Portal to delete all the resources and audio content at once. The following Az-Cli command can also be used to delete the resource group :
+
+```bash
+# Delete the resource group with all the resources
+az group delete --name <resource-group>
+```
+
+Also, for security purpose, remove the unused GitHub PAT token in your GitHub account.
