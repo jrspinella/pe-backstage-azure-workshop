@@ -166,19 +166,52 @@ az provider register --namespace 'Microsoft.App'
 
 </details>
 
-# Module 2 - Lab 1 - Install Backstage
+# Module 2 - Lab 1 - Install Backstage as your IDP
 
-In this lab, we will initialize the standalone app for the moment. In the later labs, we will add an external database to it and deploy it to Azure. As well as, do some configurarion to make it work with Azure and GitHub.
+In this lab, we will initialize the standalone app for the moment. In the later labs, we will add an external database to it and deploy it to Azure on the Control Plane cluster. As well as, do some configurarion to make it work with Azure and GitHub.
 
-To get set up quickly with your own Backstage project you can create a Backstage App. We will run Backstage locally and configure the app.
+## Step 1 - Validate Prereqs and Fork Repository
+
+To get started, you will need to validate you have the following tools:
+
+- [Node.js](https://nodejs.org/en/download/) (LTS version)
+- [Yarn](https://yarnpkg.com/getting-started/install)
+- [Docker](https://www.docker.com/get-started)
+- [Git](https://git-scm.com/downloads)
+
+Then, fork the repository from GitHub:
+
+![Repo Fork](./assets/lab1-installbackstage/repo-fork.png)
+
+Then clone the repository to your local machine:
+
+```shell
+git clone
+```
+
+<details>
+<summary>📚 Toggle solution</summary>
+
+```shell
+git clone
+```
+</details>
+
+Now that you cloned the repo, we can set up quickly with your own Backstage project you can create a Backstage App. We will run Backstage locally and configure the app.
 
 A Backstage App is a monorepo setup with `lerna` that includes everything you need to run Backstage in your own environment.
 
-## Step 1 - Create a Backstage App
+## Step 2 - Create a Backstage App
 
 Backstage provides a utility for creating new apps. It guides you through the initial setup of selecting the name of the app and a database for the backend.
 
-To create a new app, run the following command:
+To create a new app, run the following command from the root directory of your Backstage folder in the terminal:
+
+```shell
+cd backstage
+```
+
+Then run the following command:
 
 ```shell
 npx @backstage/create-app@latest
@@ -509,16 +542,16 @@ const app = createApp({
 
 The Azure provider can also be configured to fetch organizational data from GitHub. This data can be used to filter the users that are allowed to sign in to Backstage.
 
-This can be done by adding the **@backstage/plugin-catalog-backend-module-github-org** package to your backend.
+This can be done by adding the **@backstage/plugin-catalog-backend-module-msgraph** package to your backend.
 
 ### Backend Installation
 
-The package is not installed by default, therefore you have to add **@backstage/plugin-catalog-backend-module-github-org** to your backend package.
+The package is not installed by default, therefore you have to add **@backstage/plugin-catalog-backend-module-msgraph** to your backend package.
 
 Run the following command from your **Backstage root directory**:
 
 ```typescript
-yarn --cwd packages/backend add @backstage/plugin-catalog-backend-module-github-org
+yarn --cwd packages/backend add @backstage/plugin-catalog-backend-module-msgraph
 ```
 
 Next add the basic configuration to the **app-config.yaml** file:
@@ -526,20 +559,31 @@ Next add the basic configuration to the **app-config.yaml** file:
 ```yaml
 catalog:
   providers:
-    githubOrg:
-      id: production
-      githubUrl: https://github.com
-      orgs: ['<Your Org Name>']
-      schedule:
-        initialDelay: { seconds: 30 }
-        frequency: { hours: 1 }
-        timeout: { minutes: 50 }
+    microsoftGraphOrg:
+      default:
+        tenantId: ${AZURE_TENANT_ID}
+        user:
+          filter: accountEnabled eq true and userType eq 'member'
+        group:
+          filter: >
+            securityEnabled eq false
+            and mailEnabled eq true
+            and groupTypes/any(c:c+eq+'Unified')
+        schedule:
+          frequency: PT1H
+          timeout: PT50M
 ```
+
+<div class="tip" data-title="Tips">
+
+> For large organizations, this plugin can take a long time, so be careful setting low frequency / timeouts and importing a large amount of users / groups for the first try.
+
+<div>
 
 Finally, update your backend by adding to **packages/backend/src/index.ts**  following line:
 
 ```typescript
-backend.add(import('@backstage/plugin-catalog-backend-module-github-org'));
+backend.add(import('@backstage/plugin-catalog-backend-module-msgraph'));
 ```
 
 You have completed the first lab. You have created a new Backstage app and explored the app.
@@ -740,7 +784,7 @@ az aks browse --resource-group <your resource group> --name <your aks cluster na
 
 Now that you have access to the ArgoCD UI, you can manage the applications deployed on the cluster. Next, let's build out paved path templates to be used in Backstage.
 
-# Module 4 - Lab 3 - Paved Paths
+# Module 4 - Lab 3 - Building Paved Paths with Backstage
 
 In this lab, we will discuss how to implement paved paths in Backstage. Paved paths are predefined paths that provide a set of best practices and configurations for specific types of applications.
 
