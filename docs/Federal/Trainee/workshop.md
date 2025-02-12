@@ -44,17 +44,27 @@ Before seeing the solutions listed under the provided resources and links, it is
 Before starting this lab, be sure to set your Azure environment :
 
 - An Azure Subscription with the **Owner** role to create and manage the labs' resources and deploy the infrastructure as code
-- Register the Azure providers on your Azure Subscription if not done yet: `Microsoft.KeyVault`, `Microsoft.Web`, `Microsoft.App`.
+- Register the Azure providers on your Azure Subscription if not done yet: `Microsoft.ContainerService`,
+`Microsoft.Network`,
+`Microsoft.Storage`,
+`Microsoft.Compute`,
+`Microsoft.AppPlatform`,
+`Microsoft.App`,
+`Microsoft.KeyVault`,
 - Install the `Azure CLI` on your local machine or use the Azure Cloud Shell
 - Install `Terraform` on your local machine
 - A `GitHub account` to create a GitHub App and use the GitHub integration in Backstage
 
 To be able to do the lab content you will also need:
 
-- Basic understanding of Azure resources.
+- Basic understanding of Azure resources which includes Azure Kubernetes Service (AKS), Azure Container Registry (ACR), Azure Key Vault.
+- Basic understanding of Terraform and how to deploy resources using Terraform.
+- Basic understanding of GitHub and how to create a GitHub App.
+- Basic understanding of Backstage and how to deploy and configure Backstage.
+- Basic understanding of Docker and how to create a Docker image.
+- Basic understanding of Kubernetes and how to deploy applications to Kubernetes with ArgoCD and Crossplane.
 - A Github account (Free, Team or Enterprise)
-- Create a [fork](https://github.com/join) of the repository from the **main** branch to help you keep track of your potential changes
-
+- Create a [fork](https://github.com/azurenoops/pe-backstage-azure-workshop) of the repository from the **main** branch to help you keep track of your potential changes.
 
 3 development options are available:
   - 🥇 **Preferred method** : Pre-configured GitHub Codespace 
@@ -64,7 +74,6 @@ To be able to do the lab content you will also need:
 <div class="tip" data-title="Tips">
 
 > To focus on the main purpose of the lab, we encourage the usage of devcontainers/codespace as they abstract the dev environment configuration, and avoid potential local dependencies conflict.
-> 
 > You could decide to run everything without relying on a devcontainer : To do so, make sure you install all the prerequisites detailed below.
 
 </div>
@@ -367,181 +376,114 @@ Because we are still in the development mode, any changes to the `app-config.yam
 
 </div>
 
-## Step 4 - Add GitHub Organization
+## Step 4 - Update your Azure Entra Organization
 
-In order to use the full potential of Backstage, you need to add a GitHub organization to the app. This will allow you to use the GitHub integration to fetch data from your GitHub repositories.
+In order to use the full potential of Backstage,  you will need to setup the Microsoft Entra ID plugin. This plugin allows you to authenticate users using Microsoft Entra ID.
 
-To add a GitHub organization, follow these steps:
+### Configure App Registration on Azure
 
-1. Go to Github.com and click on your profile picture in the top right corner.
-2. Go to 'Your organizations'
-![github-org-profile](./assets/lab1-installbackstage/github-org-1.png)
-3. You will be at your organizations list, click on 'New organization' in the top right corner of the screen.
-4. Click Free Organization.
-![github-org-free0org](./assets/lab1-installbackstage/github-org-2.png)
-5. Enter a name for your organization, email, set to personal account and click 'Next'.
+To add Microsoft Entra ID authentication to Backstage, you must create an App Registration in Azure Active Directory. This App Registration will be used to authenticate users using Microsoft Entra ID.
 
-We will use this organization in the next labs to authenicate and fetch data from GitHub from Backstage.
+Depending on how locked down your company is, you may need a directory administrator to do some or all of these instructions.
 
-## Step 5 - Add GitHub Auth Integration
+Go to [Azure Portal > App registrations](https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade) and find your existing app registration, or create a new one. If you have an existing App Registration for Backstage, use that rather than create a new one.
 
-The Backstage `core-plugin-api` package comes with a Microsoft authentication provider that can authenticate users using GitHub or GitHub Enterprise OAuth. This provider can be configured to use a GitHub App or an OAuth App. In this lab, we will use an OAuth App.
+On your app registration's overview page, add a new Web platform configuration, with the configuration:
 
-### Create an OAuth App for your GitHub Organization
+- Redirect URI: https://your-backstage.com/api/auth/microsoft/handler/frame (for local dev, typically http://localhost:7007/api/auth/microsoft/handler/frame)
+- Front-channel logout Url: blank
+- Implicit grant and hybrid flows: All unchecked
 
-To add GitHub authentication to Backstage, you must create either a GitHub App, or an OAuth App from the GitHub developer settings. The Homepage URL should point to Backstage's frontend, while the Authorization callback URL will point to the auth backend.
+On the API permissions tab, click on Add Permission, then add the following Delegated permission for the Microsoft Graph API.
 
-#### Using the CLI (public GitHub only)
+- email
+- offline_access
+- openid
+- profile
+- User.Read
 
-To create an OAuth App on GitHub in your Organization, follow these steps:
-
-You can use the backstage-cli to create a GitHub App using a manifest file that we provide. This gives us a way to automate some of the work required to create a GitHub app.
-
-```shell
-yarn backstage-cli create-github-app <github org>
-```
-
-This command will guide you through the process of creating a GitHub App. You will be asked to provide the following information:
-
-- **Select permissions:** Select 'A' for all permissions.
-
-![github-app-cli](./assets/lab1-installbackstage/github-app-cli.png)
-
-A new window will open in your browser where you can create the GitHub App. Fill in the form with the following values:
-
-- **GitHub App name:** Backstage-'<'your org name'>'
-
-![github-app-name](./assets/lab1-installbackstage/github-app-name.png)
-
-Once you've gone through the CLI command, it should produce a YAML file in the root of the project which you can then use as an include in your app-config.yaml.
-
-![github-app-name](./assets/lab1-installbackstage/github-app-creds.png)
-
-#### Including in Integrations Config
-
-You can include the generated GitHub App configuration in your app-config.yaml file like this:
-
-```yaml
-integrations:
-  github:
-    - host: github.com
-      apps:
-        - $include: example-backstage-app-credentials.yaml
-```
+Optional custom scopes of the Microsoft Graph API defined in the app-config.yaml file.
+Your company may require you to grant admin consent for these permissions. Even if your company doesn't require admin consent, you may wish to do so as it means users don't need to individually consent the first time they access backstage. To grant admin consent, a directory admin will need to come to this page and click on the Grant admin consent for COMPANY NAME button.
 
 <div class="tip" data-title="Tips">
 
-> Please note that the credentials file is highly sensitive and should NOT be checked into any kind of version control. Instead use your preferred secure method of distributing secrets.
+> If you're using an existing app registration, and backstage already has a client secret, you can re-use that. If not, go to the Certificates & Secrets page, then the Client secrets tab and create a new client secret. Make a note of this value as you'll need it in the next section.
 
 </div>
 
-#### Adding the GitHub App to Backstage
+## Step 5 - Add Entra Configuration as Code
 
-Now we need to make sure the GitHub app is able to access Backstage.
+Backstage allows you to define configuration as code using the `app-config.yaml` file. This file contains all the configuration settings for your Backstage app, including the organization name, the app title, and the backend URL.
 
-Fill in the form with the following values in the Github App settings:
-
-- **Homepage URL:** http://localhost:3000
-- **Authorization callback URL:** http://localhost:7007/api/auth/github/handler/frame
-
-Click on the `Save changes` button.
-
-#### Configuring App permissions
-
-The GitHub App permissions can be configured in the GitHub App settings. Which is located at `https://github.com/organizations/{ORG}/settings/apps/{APP_NAME}/permissions` or clicking on the `Permissions & events` tab in the GitHub App settings.
-
-The permissions required for the GitHub App to work with Backstage are:
-
-**Reading software components:**
-
-- Contents: Read-only
-- Commit statuses: Read-only
-
-**Reading organization data:**
-
-- Members: Read-only
-
-**Publishing software templates:**
-
-- Administration: Read & write (for creating repositories)
-- Contents: Read & write
-- Metadata: Read-only
-- Pull requests: Read & write
-- Issues: Read & write
-- Workflows: Read & write (if templates include GitHub workflows)
-- Variables: Read & write (if templates include GitHub Action Repository Variables)
-- Secrets: Read & write (if templates include GitHub Action Repository Secrets)
-- Environments: Read & write (if templates include GitHub Environments)
-
-<div class="tip" data-title="Tips">
-
-> If you're using a GitHub App, the allowed scopes are configured as part of that app. This means you need to verify what scopes the plugins you use require, so be sure to check the plugin READMEs for that information.
-
-</div>
-
-### Configure GitHub Auth in Backstage
-
-The provider configuration can then be added to your app-config.yaml under the root auth configuration:
+To add configuration settings to your Backstage app, open the `app-config.yaml` file in the root directory of your app and add the following configuration settings:
 
 ```yaml
 auth:
   environment: development
   providers:
-    github:
+    microsoft:
       development:
-        clientId: ${AUTH_GITHUB_CLIENT_ID}
-        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
-        ## uncomment if using GitHub Enterprise
-        # enterpriseInstanceUrl: ${AUTH_GITHUB_ENTERPRISE_INSTANCE_URL}
+        clientId: ${AZURE_CLIENT_ID}
+        clientSecret: ${AZURE_CLIENT_SECRET}
+        tenantId: ${AZURE_TENANT_ID}
+        domainHint: ${AZURE_TENANT_ID}
         signIn:
           resolvers:
-            # See https://backstage.io/docs/auth/github/provider#resolvers for more resolvers
-            - resolver: usernameMatchingUserEntityName
-
+            # See https://backstage.io/docs/auth/microsoft/provider#resolvers for more resolvers
+            - resolver: userIdMatchingUserEntityAnnotation
 ```
-
-The GitHub provider is a structure with these configuration keys:
-
-- **clientId:** The client ID that you generated on GitHub, e.g. b59241722e3c3b4816e2
-- **clientSecret:** The client secret tied to the generated client ID.
-- **enterpriseInstanceUrl (optional):** The base URL for a GitHub Enterprise instance, e.g. https://ghe.<company>.com. Only needed for GitHub Enterprise.
-- **callbackUrl (optional):** The callback URL that GitHub will use when initiating an OAuth flow, e.g. https://your-intermediate-service.com/handler. Only needed if Backstage is not the immediate receiver (e.g. one OAuth app for many backstage instances).
-- **signIn:** The configuration for the sign-in process, including the resolvers that should be used to match the user from the auth provider with the user entity in the Backstage catalog (typically a single resolver is sufficient).
-
-#### GitHub Resolvers
-
-This provider includes several resolvers out of the box that you can use:
-
-- **emailMatchingUserEntityProfileEmail:** Matches the email address from the auth provider with the User entity that has a matching spec.profile.email. If no match is found it will throw a NotFoundError.
-- **emailLocalPartMatchingUserEntityName:** Matches the local part of the email address from the auth provider with the User entity that has a matching name. If no match is found it will throw a NotFoundError.
-- **usernameMatchingUserEntityName:** Matches the username from the auth provider with the User entity that has a matching name. If no match is found it will throw a NotFoundError.
 
 <div class="tip" data-title="Tips">
 
-> The resolvers will be tried in order, but will only be skipped if they throw a NotFoundError.
+> You can define configuration settings for different environments by creating separate configuration files for each environment. For example, you can create an `app-config.local.yaml` file for local development and an `app-config.production.yaml` file for production.
 
 </div>
 
-### Backend Installation
+The Microsoft provider is a structure with three mandatory configuration keys:
 
-To add the provider to the backend we will first need to install the package by running this command from your **Backstage root directory**:
+- **clientId:** Application (client) ID, found on App Registration > Overview
+- **clientSecret:** Secret, found on App Registration > Certificates & secrets
+- **tenantId:** Directory (tenant) ID, found on App Registration > Overview
+- **domainHint (optional):** Typically the same as tenantId. Leave blank if your app - registration is multi tenant. When specified, this reduces login friction for - users with accounts in multiple tenants by automatically filtering away accounts from other tenants. For more details, see Home Realm Discovery
+- **additionalScopes (optional):** List of scopes for the App Registration, to be requested in addition to the required ones.
+- **skipUserProfile (optional):** If true, skips loading the user profile even if the User.Read scope is present. This is a performance optimization during login and can be used with resolvers that only needs the email address in spec.profile.email obtained when the email OAuth2 scope is present.
+
+### Resolvers
+
+This provider includes several resolvers out of the box that you can use:
+
+- emailMatchingUserEntityProfileEmail: Matches the email address from the auth provider with the User entity that has a matching spec.profile.email. If no match is found it will throw a NotFoundError.
+- emailLocalPartMatchingUserEntityName: Matches the local part of the email address from the auth provider with the User entity that has a matching name. If no match is found it will throw a NotFoundError.
+- emailMatchingUserEntityAnnotation: Matches the email address from the auth provider with the User entity where the value of the microsoft.com/email annotation matches. If no match is found it will throw a NotFoundError.
+- userIdMatchingUserEntityAnnotation: Matches the user profile ID from the auth provider with the User entity where the value of the graph.microsoft.com/user-id annotation matches. This resolver is recommended to resolve users without an email in their profile. If no match is found it will throw a NotFoundError.
+
+## Step 5 - Add Backend Integration
+
+To add the backend integration to the Backstage app, you will need to install the `@backstage/plugin-auth-backend-module-microsoft-provider` package. This package provides the backend integration for Microsoft Entra ID.
+
+To install the package, run the following command from the root directory of your Backstage app:
+
+```shell
+yarn --cwd packages/backend add @backstage/plugin-auth-backend-module-microsoft-provider
+```
+Then we will need to this line in **packages/backend/src/index.ts**:
 
 ```typescript
-yarn --cwd packages/backend add @backstage/plugin-auth-backend-module-github-provider
+backend.add(import('@backstage/plugin-auth-backend-module-microsoft-provider'));
 ```
 
-Then we will need to add this line in **packages/backend/src/index.ts**:
+## Step 6 - Add Frontend Integration
+
+To add the frontend integration to the Backstage app, you will need to add a Signin Page. This page will allow users to sign in to the app using Microsoft Entra ID.
+
+Sign-in is configured by providing a custom SignInPage app component. It will be rendered before any other routes in the app and is responsible for providing the identity of the current user. The SignInPage can render any number of pages and components, or just blank space with logic running in the background.
+
+In the end, however, it must provide a valid Backstage user identity through the onSignInSuccess callback prop, at which point the rest of the app is rendered.
+
+We will need to add this line in **packages/app/src/App.tsx**:
 
 ```typescript
-backend.add(import('@backstage/plugin-auth-backend-module-github-provider'));
-```
-
-### Adding the provider to the Backstage frontend
-
-Now that the backend is set up, you can add the GitHub provider to the frontend. This is done by adding the provider to the SignInPage component in the app. The SignInPage component is a component that is used to sign in to the app. Add the following code in **packages/app/src/App.tsx**:
-
-```typescript
-import { githubAuthApiRef } from '@backstage/core-plugin-api';
+import { microsoftAuthApiRef } from '@backstage/core-plugin-api';
 import { SignInPage } from '@backstage/core-components';
 
 const app = createApp({
@@ -551,10 +493,10 @@ const app = createApp({
         {...props}
         auto
         provider={{
-          id: 'github-auth-provider',
-          title: 'GitHub',
-          message: 'Sign in using GitHub',
-          apiRef: githubAuthApiRef,
+          id: 'microsoft-auth-provider',
+          title: 'Microsoft',
+          message: 'Sign in using Microsoft',
+          apiRef: microsoftAuthApiRef,
         }}
       />
     ),
@@ -563,15 +505,9 @@ const app = createApp({
 });
 ```
 
-<div class="tip" data-title="Tips">
+### Adding Entra ID Organizational Data
 
-> You can configure sign-in to use a redirect flow with no pop-up by adding enableExperimentalRedirectFlow: true to the root of your app-config.yaml
-
-</div>
-
-### Adding GitHub Organizational Data
-
-The GitHub provider can also be configured to fetch organizational data from GitHub. This data can be used to filter the users that are allowed to sign in to Backstage.
+The Azure provider can also be configured to fetch organizational data from GitHub. This data can be used to filter the users that are allowed to sign in to Backstage.
 
 This can be done by adding the **@backstage/plugin-catalog-backend-module-github-org** package to your backend.
 
@@ -608,7 +544,201 @@ backend.add(import('@backstage/plugin-catalog-backend-module-github-org'));
 
 You have completed the first lab. You have created a new Backstage app and explored the app.
 
-# Module 3 - Lab 2 - Deploy Kubernetes Cluster on Azure
+# Module 3 - Lab 2 - Deploy Control Plane cluster - Azure Kubernetes Service(AKS) on Azure
+
+In this lab, we will deploy the Control Plane cluster on Azure Kubernetes Service (AKS). We will use Terraform to define the infrastructure as code for the deployment of Backstage on Azure.
+
+## Step 1 - Validate you Pre-requisites
+
+## Step 2 - Provision the Control Plane Cluster
+
+With the repository that you cloned in Lab 1, it comes with a pre-defined Terraform code and configuration. The code is located in the `terraform/aks` folder.
+
+To provision the Control Plane cluster, run the following command from your **Backstage root directory**:
+
+```shell
+cd terraform/aks
+```
+
+Then run the following command to initialize Terraform:
+
+```shell
+terraform init
+```
+
+Then run the following command to validate the Terraform configuration:
+
+```shell
+terraform validate
+```
+
+Then run the following command to plan the Terraform configuration:
+
+```shell
+terraform plan -var gitops_addons_org=https://github.com/azurenoops -var infrastructure_provider=crossplane 
+```
+
+Then run the following command to apply the Terraform configuration:
+
+```shell
+terraform apply --auto-approve
+```
+
+<div class="tip" data-title="Tips">
+
+>Note: You can ignore the warnings related to deprecated attributes and invalid kubeconfig path.
+
+</div>
+
+Terraform completed installing the AKS cluster, installing ArgoCD, and configuring ArgoCD to install applications under the gitops/bootstrap/control-plane/addons directory from the git repo.
+
+<details>
+<summary>📚 Toggle solution</summary>
+
+```shell
+cd terraform/aks
+terraform init
+terraform validate
+terraform plan -var gitops_addons_org=
+terraform apply --auto-approve
+```
+
+</details>
+
+Now that the AKS cluster is provisioned, you can access the ArgoCD UI to manage the applications deployed on the cluster. This will show you the status of the applications deployed on the cluster and allow you to manage the applications.
+
+## Step 3 - Validate the Cluster is working
+
+To access the AKS cluster, you need to set the KUBECONFIG environment variable to point to the kubeconfig file generated by Terraform.
+
+You can do this by running the following command:
+
+```shell
+export KUBECONFIG=<your_path_to_this_repo>/pe-backstage-azure-workshop/terraform//aks/kubeconfig
+echo $KUBECONFIG
+```
+
+<div class="task" data-title="Task">
+
+> To run the following commands, you will need to have the a bash shell installed on your machine. If you are using Windows, you can use the Windows Subsystem for Linux (WSL) to run the commands.
+
+</div>
+
+To validate that the cluster is working, you can run the following command to get the list of pods running on the cluster:
+
+```shell
+kubectl get pods --all-namespaces
+```
+You should see the following pods running on the cluster:
+
+```shell
+NAMESPACE           NAME                                                              READY   STATUS    RESTARTS          AGE
+argo-events         argo-events-controller-manager-654f58ccbb-r6z4p                   1/1     Running   0                 46h
+argo-rollouts       argo-rollouts-69566b6478-ljn89                                    1/1     Running   0                 46h
+argo-rollouts       argo-rollouts-69566b6478-sxr96                                    1/1     Running   0                 46h
+argo-workflows      argo-workflows-server-c7cdc656c-ccg5w                             1/1     Running   0                 46h
+argo-workflows      argo-workflows-workflow-controller-98d946f85-4vmzg                1/1     Running   0                 46h
+argocd              argo-cd-argocd-application-controller-0                           1/1     Running   0                 46h
+argocd              argo-cd-argocd-applicationset-controller-677fd74987-7rxw7         1/1     Running   0                 46h
+argocd              argo-cd-argocd-dex-server-85f5db5458-sldwc                        1/1     Running   0                 46h
+argocd              argo-cd-argocd-notifications-controller-6cf884fb7f-g4j4s          1/1     Running   0                 46h
+argocd              argo-cd-argocd-redis-6c766746d8-s8smm                             1/1     Running   0                 46h
+argocd              argo-cd-argocd-repo-server-7c96b84946-c9t7d                       1/1     Running   0                 46h
+argocd              argo-cd-argocd-server-78498f46f6-f8944                            1/1     Running   0                 46h
+crossplane-system   crossplane-6b5b8f9549-pf2qd                                       1/1     Running   0                 20h
+crossplane-system   crossplane-rbac-manager-bcddfb7-ljzqj                             1/1     Running   0                 20h
+crossplane-system   helm-provider-b4cc4c2c8db3-5764597587-vzkjj                       1/1     Running   0                 46h
+crossplane-system   kubernetes-provider-63506a3443e0-555885778d-2mdfm                 1/1     Running   0                 46h
+crossplane-system   provider-azure-authorization-f895924437f1-79d9475b6c-69l4j        1/1     Running   0                 46h
+crossplane-system   provider-azure-compute-7e421911713b-f89ff4bcd-z4sg6               1/1     Running   0                 46h
+crossplane-system   provider-azure-containerregistry-cc0ea28bc72c-5bc6c598df-rcv5v    1/1     Running   0                 46h
+crossplane-system   provider-azure-containerservice-ff556ea47e39-6d7c5d5496-vkzll     1/1     Running   0                 46h
+crossplane-system   provider-azure-insights-fccb10339123-8578d6b4cf-qkn7b             1/1     Running   0                 46h
+crossplane-system   provider-azure-keyvault-ecb17f6d99ee-df474c649-g6rmv              1/1     Running   0                 46h
+crossplane-system   provider-azure-managedidentity-2eb78f1d31af-78df94999-7l4nh       1/1     Running   0                 46h
+crossplane-system   provider-azure-network-f8cbea533640-5555858556-dfn8k              1/1     Running   0                 46h
+crossplane-system   provider-azure-operationalinsights-93f88e54a392-5766bc9754r7wwn   1/1     Running   0                 46h
+crossplane-system   provider-azure-resources-b3fb49bf7242-566d5796d6-hbr5w            1/1     Running   0                 46h
+crossplane-system   provider-azure-storage-054d1eea44b0-7c9bb4f8d8-gj7ft              1/1     Running   0                 46h
+crossplane-system   upbound-provider-family-azure-dde405d96fb8-69b848f6ff-dzsdd       1/1     Running   0                 46h
+kube-system         ama-metrics-7c58b86db7-htqmt                                      2/2     Running   160 (8m17s ago)   46h
+kube-system         ama-metrics-7c58b86db7-zw6fq                                      2/2     Running   160 (8m17s ago)   46h
+kube-system         ama-metrics-ksm-5bd68b9c-5tdpv                                    1/1     Running   0                 46h
+kube-system         ama-metrics-node-4mtvs                                            2/2     Running   158 (3m32s ago)   46h
+kube-system         ama-metrics-operator-targets-78794c6db8-w8hpt                     2/2     Running   2 (46h ago)       46h
+kube-system         azure-ip-masq-agent-mknql                                         1/1     Running   0                 20h
+kube-system         azure-npm-hg4jf                                                   1/1     Running   0                 46h
+kube-system         azure-wi-webhook-controller-manager-566c779d5c-5ghf5              1/1     Running   0                 46h
+kube-system         azure-wi-webhook-controller-manager-566c779d5c-hb8sc              1/1     Running   0                 46h
+kube-system         cloud-node-manager-rxg9c                                          1/1     Running   0                 46h
+kube-system         coredns-659fcb469c-mbp82                                          1/1     Running   0                 20h
+kube-system         coredns-659fcb469c-pqk4p                                          1/1     Running   0                 20h
+kube-system         coredns-autoscaler-5d468f7bb5-ppvk2                               1/1     Running   0                 46h
+kube-system         csi-azuredisk-node-dfw7s                                          3/3     Running   0                 20h
+kube-system         csi-azurefile-node-w84ph                                          3/3     Running   0                 20h
+kube-system         konnectivity-agent-698c9ffbb8-r672k                               1/1     Running   0                 46h
+kube-system         konnectivity-agent-698c9ffbb8-sxgmp                               1/1     Running   0                 46h
+kube-system         kube-proxy-z6ldd                                                  1/1     Running   0                 46h
+kube-system         metrics-server-5dfc656944-m5pqd                                   2/2     Running   0                 46h
+kube-system         metrics-server-5dfc656944-rm2md                                   2/2     Running   0                 46h
+kube-system         retina-agent-pw88n                                                1/1     Running   0                 46h
+```
+
+## Step 4 - Accessing the Control Plane Cluster and ArgoCD UI
+
+To access the Control Plane cluster, you will need to configure the kubectl context to point to the AKS cluster.
+
+Then you can run the following command to get the initial admin password and the IP address of the ArgoCD web interface:
+
+```shell
+kubectl get secrets argocd-initial-admin-secret -n argocd --template="{{index .data.password | base64decode}}"
+```
+
+<div class="tips" data-title="Tips">
+
+> Make sure you copy the password and save it somewhere. You will need it to log in to the ArgoCD UI.
+
+</div>
+
+When you run the above command, you will get the initial admin password for the ArgoCD UI. You can use this password to log in to the ArgoCD UI.
+
+![ArgoCD-login](./assets/lab2-controlplane/argocd-login.png)
+
+Then run the following command to get the IP address of the ArgoCD web interface:
+
+```shell
+kubectl get svc -n argocd argo-cd-argocd-server
+```
+
+It may take a few minutes for the LoadBalancer to create a public IP for the ArgoCD UI after the Terraform apply. In case something goes wrong and you don't find a public IP, connect to the ArgoCD server doing a port forward with kubectl and access the UI on https://localhost:8080.
+
+```shell
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+```
+
+You can now access the ArgoCD UI using the IP address and the initial admin password.
+
+![ArgoCD-dashboard](./assets/lab2-controlplane/argocd-dashboard.png)
+
+
+
+<div class="tip" data-title="Tips">
+
+>Note: You can ignore the warnings related to deprecated attributes and invalid kubeconfig path.
+
+</div>
+
+<details>
+<summary>📚 Toggle solution</summary>
+
+```shell
+az aks get-credentials --resource-group <your resource group> --name <your aks cluster name>
+az aks browse --resource-group <your resource group> --name <your aks cluster name>
+```
+
+</details>
+
+Now that you have access to the ArgoCD UI, you can manage the applications deployed on the cluster. Next, let's build out paved path templates to be used in Backstage.
 
 # Module 4 - Lab 3 - Paved Paths
 
