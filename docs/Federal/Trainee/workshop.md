@@ -1,7 +1,7 @@
 ---
 published: false                        # Optional. Set to true to publish the workshop (default: false)
 type: workshop                          # Required.
-title: Hands-on Lab - Platform Engineering for Federal with BackStage # Required. Full title of the workshop
+title: Product Hands-on Lab - Platform Engineering for Federal with BackStage # Required. Full title of the workshop
 short_title: Platform Engineering for Federal with BackStage      # Optional. Short title displayed in the header
 description: This workshop will cover the...  # Required.
 level: intermediate                     # Required. Can be 'beginner', 'intermediate' or 'advanced'
@@ -9,7 +9,8 @@ authors:                                # Required. You can add as many authors 
   - John Spinella, Steve St Jean, John Scott, Matthew Ross
 contacts:                               # Required. Must match the number of authors
   - "@jrspinella"
-duration_minutes: 150                    # Required. Estimated duration in minutes
+duration_minutes: 150    # Required. Estimated duration in minutes
+navigation_numbering: false                
 tags: azure policies, azure deployment environment, backstage, github advanced security, microsoft dev box, dev center, azure, github, ops, federal csu          # Required. Tags for filtering and searching
 #banner_url: assets/banner.jpg           # Optional. Should be a 1280x640px image
 #video_url: https://youtube.com/link     # Optional. Link to a video of the workshop
@@ -21,23 +22,39 @@ tags: azure policies, azure deployment environment, backstage, github advanced s
 #sections_title:                         # Optional. Override titles for each section to be displayed in the side bar
 #   - Section 1 title
 #   - Section 2 title
+navigation_levels: 3
 ---
 
-# Hands-on Lab - Platform engineering for Federal with BackStage
+# Product Hands-on Lab - Platform engineering with BackStage
 
 Welcome to this Platform engineering for Federal Workshop. At its core, platform engineering is about constructing a solid and adaptable groundwork that simplifies and accelerates the development, deployment, and operation of software applications. The goal is to abstract the complexity inherent in managing infrastructure and operational concerns, enabling dev teams to focus on crafting code that adds direct value to the mission.
 
-In order to comprehend real-world situations, you will be testing with Azure services in several labs. You will be able to learn how to deploy and manage Azure resources, as well as how to use Azure services to build and deploy applications with the help of GitHub and Backstage. Don't worry; you will be walked through the entire procedure in this step-by-step lab.
+In order to comprehend real-world situations, you will be testing with serveral different toos and services in several labs. You will be able to learn how to deploy and manage Azure resources, as well as how to use Azure services to build and deploy applications with the help of AKS, GitHub and Backstage. Don't worry; you will be walked through the entire procedure in this step-by-step lab.
 
 You will receive guidance on how to do each step throughout this workshop. You will be able to test your knowledge and skills by completing the labs.
 Before seeing the solutions listed under the provided resources and links, it is advised to look at the solutions placed under the '📚 Toggle solution' panel.
 
-<div class="task" data-title="Task">
+This lab leverages the [GitOps Bridge Pattern](https://github.com/gitops-bridge-dev/gitops-bridge?tab=readme-ov-file). The following diagram shows the high-level architecture of the solution from [platformengineering.org](https://platformengineering.org/):
+![GitOps Bridge Pattern](./assets/lab0-prerequisites/gitops-bridge-pattern.png)
 
-> You will find the instructions and expected configurations for each Lab step in these yellow **TASK** boxes.
-> Inputs and parameters to select will be defined, all the rest can remain as default as it has no impact on the scenario.
+The tools in this lab to build out your Integrated Development Platform (IDP) include:
+
+- [GitHub]() (as your Git repo)
+- [Backstage](https://backstage.io/) (as your self-service portal)
+- [ArgoCD](https://argoproj.github.io/cd/) (as your Platform Orchestrator)
+- [Argo Workflows](https://argoproj.github.io/workflows/) (to trigger post deployment tasks)
+- [Crossplane]() (to provision Azure/GitHub resources)
+- [Azure Kubernetes Service (AKS)]() (as your Control Plane cluster)
+- [Azure Key Vault]() (to store secrets)
+- [Azure Container Registry]() (to store container images)
+
+<div class="tip" data-title="Tip">
+
+> All tools in this lab are opinionated and used to show how to build out an IDP. You can use other tools to build out your IDP.
 
 </div>
+
+If you follow all instructions, you should have your own IDP running by the end of this lab!
 
 ## Pre-requisites
 
@@ -126,7 +143,7 @@ The following tools and access will be necessary to run the lab in good conditio
 - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) installed on your machine
 - [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli) installed, this will be used for deploying the resources on Azure
 
-Once you have set up your local environment, you can clone the Hands-on Lab Platform engineering for Federal repo you just forked on your machine, and open the local folder in Visual Studio Code and head to the next step. 
+Once you have set up your local environment, you can clone the Hands-on Lab Platform engineering for Federal repo you just forked on your machine, and open the local folder in Visual Studio Code and head to the next step.
 
 ## 🔑 Sign in to Azure
 
@@ -158,10 +175,18 @@ az account set --subscription <subscription-id>
 
 # Azure Key Vault
 az provider register --namespace 'Microsoft.KeyVault'
-# Azure Functions & Azure Web Apps
-az provider register --namespace 'Microsoft.Web'
-# Azure Container Apps
+# Azure Container Registry
+az provider register --namespace 'Microsoft.ContainerRegistry'
+# Azure Kubernetes Service
+az provider register --namespace 'Microsoft.ContainerService'
+# Azure App Service
 az provider register --namespace 'Microsoft.App'
+# Azure App Service Environment
+az provider register --namespace 'Microsoft.AppPlatform'
+# Azure Storage
+az provider register --namespace 'Microsoft.Storage'
+# Azure Network
+az provider register --namespace 'Microsoft.Network'
 ```
 
 </details>
@@ -170,7 +195,7 @@ az provider register --namespace 'Microsoft.App'
 
 In this lab, we will initialize the standalone app for the moment. In the later labs, we will add an external database to it and deploy it to Azure on the Control Plane cluster. As well as, do some configurarion to make it work with Azure and GitHub.
 
-## Step 1 - Validate Prereqs and Fork Repository
+## Validate Prereqs and Fork Repository
 
 To get started, you will need to validate you have the following tools:
 
@@ -201,7 +226,7 @@ Now that you cloned the repo, we can set up quickly with your own Backstage proj
 
 A Backstage App is a monorepo setup with `lerna` that includes everything you need to run Backstage in your own environment.
 
-## Step 2 - Create a Backstage App
+## Create a Backstage App
 
 Backstage provides a utility for creating new apps. It guides you through the initial setup of selecting the name of the app and a database for the backend.
 
@@ -365,7 +390,7 @@ backstage/
   Backstage.
 * **packages/backend/**: The backend for Backstage. This is where you can add your own backend logic.
 
-## Step 2 - Run the App
+## Run the App
 
 As soon as the app is created, you can run it by navigating into the `backstage` directory and running the following command:
 
@@ -388,7 +413,7 @@ yarn dev
 
 </details>
 
-## Step 3 - Explore the App
+## Explore the App
 
 Let's have a look on some of the values in the different files and change them to your needs.
 
@@ -403,13 +428,13 @@ organization:
 
 Because we are still in the development mode, any changes to the `app-config.yaml` file will be reflected in the app as soon as you save the file. You can see the changes in the browser window.
 
-<div class="task" data-title="Task">
+<div class="warning" data-title="Warning">
 
 > If you do not see the changes in the browser window, try to refresh the page.
 
 </div>
 
-## Step 4 - Update your Azure Entra Organization
+## Update your Azure Entra Organization
 
 In order to use the full potential of Backstage,  you will need to setup the Microsoft Entra ID plugin. This plugin allows you to authenticate users using Microsoft Entra ID.
 
@@ -444,7 +469,7 @@ Your company may require you to grant admin consent for these permissions. Even 
 
 </div>
 
-## Step 5 - Add Entra Configuration as Code
+## Add Entra Configuration as Code
 
 Backstage allows you to define configuration as code using the `app-config.yaml` file. This file contains all the configuration settings for your Backstage app, including the organization name, the app title, and the backend URL.
 
@@ -490,7 +515,7 @@ This provider includes several resolvers out of the box that you can use:
 - emailMatchingUserEntityAnnotation: Matches the email address from the auth provider with the User entity where the value of the microsoft.com/email annotation matches. If no match is found it will throw a NotFoundError.
 - userIdMatchingUserEntityAnnotation: Matches the user profile ID from the auth provider with the User entity where the value of the graph.microsoft.com/user-id annotation matches. This resolver is recommended to resolve users without an email in their profile. If no match is found it will throw a NotFoundError.
 
-## Step 5 - Add Backend Integration
+## Add Backend Integration
 
 To add the backend integration to the Backstage app, you will need to install the `@backstage/plugin-auth-backend-module-microsoft-provider` package. This package provides the backend integration for Microsoft Entra ID.
 
@@ -505,7 +530,7 @@ Then we will need to this line in **packages/backend/src/index.ts**:
 backend.add(import('@backstage/plugin-auth-backend-module-microsoft-provider'));
 ```
 
-## Step 6 - Add Frontend Integration
+## Add Frontend Integration
 
 To add the frontend integration to the Backstage app, you will need to add a Signin Page. This page will allow users to sign in to the app using Microsoft Entra ID.
 
@@ -538,13 +563,13 @@ const app = createApp({
 });
 ```
 
-### Adding Entra ID Organizational Data
+## Adding Entra ID Organizational Data
 
 The Azure provider can also be configured to fetch organizational data from GitHub. This data can be used to filter the users that are allowed to sign in to Backstage.
 
 This can be done by adding the **@backstage/plugin-catalog-backend-module-msgraph** package to your backend.
 
-### Backend Installation
+## Backend Installation
 
 The package is not installed by default, therefore you have to add **@backstage/plugin-catalog-backend-module-msgraph** to your backend package.
 
@@ -592,9 +617,9 @@ You have completed the first lab. You have created a new Backstage app and explo
 
 In this lab, we will deploy the Control Plane cluster on Azure Kubernetes Service (AKS). We will use Terraform to define the infrastructure as code for the deployment of Backstage on Azure.
 
-## Step 1 - Validate you Pre-requisites
+## Validate you Pre-requisites
 
-## Step 2 - Provision the Control Plane Cluster
+## Provision the Control Plane Cluster
 
 With the repository that you cloned in Lab 1, it comes with a pre-defined Terraform code and configuration. The code is located in the `terraform/aks` folder.
 
@@ -651,7 +676,7 @@ terraform apply --auto-approve
 
 Now that the AKS cluster is provisioned, you can access the ArgoCD UI to manage the applications deployed on the cluster. This will show you the status of the applications deployed on the cluster and allow you to manage the applications.
 
-## Step 3 - Validate the Cluster is working
+## Validate the Cluster is working
 
 To access the AKS cluster, you need to set the KUBECONFIG environment variable to point to the kubeconfig file generated by Terraform.
 
@@ -728,7 +753,7 @@ kube-system         metrics-server-5dfc656944-rm2md                             
 kube-system         retina-agent-pw88n                                                1/1     Running   0                 46h
 ```
 
-## Step 4 - Accessing the Control Plane Cluster and ArgoCD UI
+## Accessing the Control Plane Cluster and ArgoCD UI
 
 To access the Control Plane cluster, you will need to configure the kubectl context to point to the AKS cluster.
 
@@ -790,7 +815,7 @@ In this lab, we will discuss how to implement paved paths in Backstage. Paved pa
 
 Paved paths can be used to create new projects based on predefined templates. These templates can include configuration files, code snippets, and other resources that help developers get started quickly with a new project.
 
-## Step 1 - Add GitHub Catalog Integration
+## Add GitHub Catalog Integration
 
 The GitHub integration has a discovery provider for discovering catalog entities within a GitHub organization. The provider will crawl the GitHub organization and register entities matching the configured path. This can be useful as an alternative to static locations or manually adding things to the catalog. This is the preferred method for ingesting entities into the catalog.
 
