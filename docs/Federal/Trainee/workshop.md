@@ -230,19 +230,6 @@ Open PowerShell (pwsh) terminal in VSCode and navigate to the root directory of 
 cd pe-backstage-azure-workshop
 ```
 
-Then create a new directory for your app by running the following command:
-
-<div class="task" data-title="Task">
-
-> Replace `<name-of-your-app>` with a name of your choice. We suggest to use `backstage`.
-
-</div>
-
-```shell
-mkdir <name-of-your-app>
-cd <name-of-your-app>
-```
-
 Then run the following command:
 
 ```shell
@@ -253,8 +240,6 @@ npx @backstage/create-app@latest
 <summary>📚 Toggle solution</summary>
 
 ```shell
-mkdir <name-of-your-app>
-cd <name-of-your-app>
 npx @backstage/create-app@latest
 ```
 
@@ -353,7 +338,7 @@ Creating the app...
 
 </details>
 
-It will then create a folder with the same name, copy several files, and run yarn install to install any dependencies for the project.
+This will create a new Backstage app in a folder called `backstage` in your root directory with the same name, copy several files, and run yarn install to install any dependencies for the project.
 
 After a few minutes, Backstage should be ready to go:
 
