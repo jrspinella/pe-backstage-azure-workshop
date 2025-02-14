@@ -8,7 +8,7 @@
   // - dotnet:6.0-bullseye
   // - javascript-node:20-bullseye
   // - java:21-bullseye
-  "image": "mcr.microsoft.com/devcontainers/base:jammy",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20-bullseye",
   "containerUser": "vscode",
   // Features to add to the dev container. More info: https://containers.dev/features.
   "features": {
