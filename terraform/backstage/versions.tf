@@ -27,10 +27,12 @@ terraform {
 data "azurerm_client_config" "current" {}
 
 provider "azuread" {
+  environment = "usgovernment"
   tenant_id = data.azurerm_client_config.current.tenant_id
 }
 
 provider "azurerm" {
+  environment = "usgovernment"
   features {
     resource_group {
       prevent_deletion_if_contains_resources = false
@@ -39,19 +41,18 @@ provider "azurerm" {
 }
 
 resource "local_file" "kubeconfig" {
-  content  = module.aks.kube_config_raw
-  filename = "${path.module}/aks/kubeconfig"
+  content  = data.azurerm_kubernetes_cluster.aks.kube_config_raw
+  filename = var.kubconfig_path
 }
 
 provider "kubernetes" {
   config_path = local_file.kubeconfig.filename
-
 }
 
 provider "helm" {
   kubernetes {
     config_path = local_file.kubeconfig.filename
   }
-
 }
+
 provider "random" {}

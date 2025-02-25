@@ -4,8 +4,8 @@ data "azurerm_subscription" "current" {}
 # Resource Group: Resource
 ################################################################################
 resource "azurerm_resource_group" "this" {
-  name     = var.resource_group_name
-  location = var.location
+  name     = local.resource_group_name
+  location = local.location
   tags     = var.tags
 }
 
@@ -35,7 +35,7 @@ module "network" {
 
 module "aks" {
   source                                          = "Azure/aks/azurerm"
-  version                                         = "9.1.0"
+  version                                         = "9.4.1"
   resource_group_name                             = azurerm_resource_group.this.name
   location                                        = var.location
   kubernetes_version                              = var.kubernetes_version
@@ -70,6 +70,12 @@ module "aks" {
   workload_identity_enabled = true
   oidc_issuer_enabled       = true
 
+  ################################################################################
+  # Identity AKS
+  ################################################################################
+  //client_id = azuread_application.akspe-app.application_id
+  //client_secret = azuread_service_principal_password.akspe-sp-password.value
+
   agents_labels = {
     "nodepool" : "defaultnodepool"
   }
@@ -86,6 +92,89 @@ module "aks" {
 
   depends_on = [module.network]
 }
+
+################################################################################
+# Identity AKS
+################################################################################
+
+/* resource "azuread_application" "akspe-app" {
+  display_name = "akspe-app"
+  owners       = [data.azurerm_client_config.current.object_id]
+
+  app_role {
+    id              = uuid() # Generate a unique ID for the role
+    allowed_member_types = ["User"]
+    description          = "Allows the app to read the profile of signed-in users."
+    display_name         = "User.Read"
+    value                = "User.Read"
+  }
+
+  app_role {
+    id              = uuid() # Generate a unique ID for the role
+    allowed_member_types = ["User"]
+    description          = "Allows the app to read all users' full profiles."
+    display_name         = "User.Read.All"
+    value                = "User.Read.All"
+  }
+
+  app_role {
+    id              = uuid() # Generate a unique ID for the role
+    allowed_member_types = ["User"]
+    description          = "Allows the app to read the memberships of all groups."
+    display_name         = "GroupMember.Read.All"
+    value                = "GroupMember.Read.All"
+  }
+
+  required_resource_access {
+    resource_app_id = "00000003-0000-0000-c000-000000000000" # Microsoft Graph API
+
+    resource_access {
+      id   = "e1fe6dd8-ba31-4d61-89e7-88639da4683d" # User.Read
+      type = "Scope"
+    }
+
+    resource_access {
+      id   = "df021288-bdef-4463-88db-98f22de89214" # User.Read.All
+      type = "Role"
+    }
+
+    resource_access {
+      id   = "98830695-27a2-44f7-8c18-0c3ebc9698f6" # GroupMember.Read.All
+      type = "Role"
+    }
+
+    resource_access {
+      id   = "64a6cdd6-aab1-4aaf-94b8-3cc8405e90d0" # email
+      type = "Scope"
+    }
+
+    resource_access {
+      id   = "7427e0e9-2fba-42fe-b0c0-848c9e6a8182" # offline_access
+      type = "Scope"
+    }
+
+    resource_access {
+      id = "e383f46e-2787-4529-855e-0e479a3ffac0" # mail.send
+      type = "Scope"
+    }
+
+    resource_access {
+      id   = "37f7f235-527c-4136-accd-4a02d197296e" # openid
+      type = "Scope"
+    }
+  }
+}
+
+# Define the service principal
+resource "azuread_service_principal" "akspe-app-sp" {
+  client_id = azuread_application.akspe-app.application_id
+}
+
+# Define the service principal password
+resource "azuread_service_principal_password" "akspe-sp-password" {
+  service_principal_id = azuread_service_principal.akspe-app-sp.id
+  end_date             = "2099-01-01T00:00:00Z"
+} */
 
 ################################################################################
 # Workload Identity: Module
@@ -114,17 +203,6 @@ resource "azurerm_federated_identity_credential" "crossplane" {
   subject             = "system:serviceaccount:crossplane-system:azure-provider"
 }
 
-resource "azurerm_federated_identity_credential" "capz" {
-  count               = var.infrastructure_provider == "capz" ? 1 : 0
-  depends_on          = [module.aks]
-  name                = "capz-manager-credential"
-  resource_group_name = azurerm_resource_group.this.name
-  audience            = ["api://AzureADTokenExchange"]
-  issuer              = module.aks.oidc_issuer_url
-  parent_id           = azurerm_user_assigned_identity.akspe.id
-  subject             = "system:serviceaccount:azure-infrastructure-system:capz-manager"
-}
-
 resource "azurerm_federated_identity_credential" "service_operator" {
   count               = var.infrastructure_provider == "capz" ? 1 : 0
   depends_on          = [module.aks]
@@ -139,7 +217,7 @@ resource "azurerm_federated_identity_credential" "service_operator" {
 ################################################################################
 # GitOps Bridge: Private ssh keys for git
 ################################################################################
-resource "kubernetes_namespace" "argocd_namespace" {
+resource "kubernetes_namespace" "argocd_nammespace" {
   depends_on = [module.aks]
   metadata {
     name = "argocd"
@@ -147,7 +225,7 @@ resource "kubernetes_namespace" "argocd_namespace" {
 }
 
 resource "kubernetes_secret" "git_secrets" {
-  depends_on = [kubernetes_namespace.argocd_namespace]
+  depends_on = [kubernetes_namespace.argocd_nammespace]
   for_each = {
     git-addons = {
       type = "git"
@@ -157,7 +235,7 @@ resource "kubernetes_secret" "git_secrets" {
   }
   metadata {
     name      = each.key
-    namespace = kubernetes_namespace.argocd_namespace.metadata[0].name
+    namespace = kubernetes_namespace.argocd_nammespace.metadata[0].name
     labels = {
       "argocd.argoproj.io/secret-type" = "repo-creds"
     }

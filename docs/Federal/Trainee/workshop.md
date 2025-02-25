@@ -974,7 +974,7 @@ Then run the following command to apply the Terraform configuration:
 terraform apply --auto-approve
 ```
 
-<div class="tip" data-title="Tips">
+<div class="warning" data-title="Warning">
 
 >Note: You can ignore the warnings related to deprecated attributes and invalid kubeconfig path.
 
@@ -1100,7 +1100,84 @@ Then run the following command to get the IP address of the ArgoCD web interface
 kubectl get svc -n argocd argo-cd-argocd-server
 ```
 
-It may take a few minutes for the LoadBalancer to create a public IP for the ArgoCD UI after the Terraform apply. In case something goes wrong and you don't find a public IP, connect to the ArgoCD server doing a port forward with kubectl and access the UI on https://localhost:8080.
+You should see the following output:
+
+```shell
+NAME                     TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)        AGE
+argo-cd-argocd-server   ClusterIP      10.0.89.227     <none>          8081/TCP         38m
+```
+
+It may take a few minutes for the LoadBalancer to create a public IP for the ArgoCD UI after the Terraform apply. If you'd like to check the resources created, you can run the following command. Again, be sure to use the namespace name you created:
+
+```shell
+kubectl get all -n argocd
+```
+
+You should see the following output:
+
+```shell
+NAME                                                              READY   STATUS    RESTARTS          AGE
+pod/argo-cd-argocd-application-controller-0                     1/1     Running   0          38m
+pod/argo-cd-argocd-applicationset-controller-677fd74987-m22gn   1/1     Running   0          38m
+pod/argo-cd-argocd-dex-server-85f5db5458-kqv9s                  1/1     Running   0          38m
+pod/argo-cd-argocd-notifications-controller-6cf884fb7f-pljhc    1/1     Running   0          38m
+pod/argo-cd-argocd-redis-6c766746d8-8k2lj                       1/1     Running   0          38m
+pod/argo-cd-argocd-repo-server-7c96b84946-xqrnz                 1/1     Running   0          38m
+pod/argo-cd-argocd-server-78498f46f6-qrfs9                      1/1     Running   0          38m
+
+NAME                                               TYPE           CLUSTER-IP    EXTERNAL-IP     PORT(S)                      AGE
+service/argo-cd-argocd-applicationset-controller   ClusterIP      10.0.180.20   <none>          7000/TCP                     38m
+service/argo-cd-argocd-dex-server                  ClusterIP      10.0.142.54   <none>          5556/TCP,5557/TCP            38m
+service/argo-cd-argocd-redis                       ClusterIP      10.0.90.173   <none>          6379/TCP                     38m
+service/argo-cd-argocd-repo-server                 ClusterIP      10.0.89.227   <none>          8081/TCP                     38m
+service/argo-cd-argocd-server                      ClusterIP      10.0.85.130   <none>          80:31650/TCP,443:30158/TCP   38m
+
+NAME                                                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/argo-cd-argocd-applicationset-controller   1/1     1            1           38m
+deployment.apps/argo-cd-argocd-dex-server                  1/1     1            1           38m
+deployment.apps/argo-cd-argocd-notifications-controller    1/1     1            1           38m
+deployment.apps/argo-cd-argocd-redis                       1/1     1            1           38m
+deployment.apps/argo-cd-argocd-repo-server                 1/1     1            1           38m
+deployment.apps/argo-cd-argocd-server                      1/1     1            1           38m
+
+NAME                                                                  DESIRED   CURRENT   READY   AGE
+replicaset.apps/argo-cd-argocd-applicationset-controller-677fd74987   1         1         1       38m
+replicaset.apps/argo-cd-argocd-dex-server-85f5db5458                  1         1         1       38m
+replicaset.apps/argo-cd-argocd-notifications-controller-6cf884fb7f    1         1         1       38m
+replicaset.apps/argo-cd-argocd-redis-6c766746d8                       1         1         1       38m
+replicaset.apps/argo-cd-argocd-repo-server-7c96b84946                 1         1         1       38m
+replicaset.apps/argo-cd-argocd-server-78498f46f6                      1         1         1       38m
+
+NAME                                                     READY   AGE
+statefulset.apps/argo-cd-argocd-application-controller   1/1     38m
+```
+
+As you can see, the Argo CD API server service is not exposed by default; this means it is configured with a Cluster IP and not a Load Balancer. To access the API server you will have to do one of the following:
+
+- Expose the API server with a Load Balancer
+- Use port forwarding to access the API server
+- Use the kubectl proxy command to access the API server
+
+To expose the API server with a Load Balancer, you can run the following command:
+
+```shell
+kubectl patch svc argo-cd-argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
+```
+
+<div class="tip" data-title="Tips">
+
+>Note: It will take a few minutes for the LoadBalancer to create a public IP for the ArgoCD UI after the Terraform apply. If you'd like to check the resources created, you can run the following command. Again, be sure to use the namespace name you created:
+
+```shell
+kubectl get all -n argocd
+```
+</div>
+
+<div class="task" data-title="Task">
+
+> To run the following commands, you will need to have the a bash shell installed on your machine. If you are using Windows, you can use the Windows Subsystem for Linux (WSL) to run the commands.
+
+</div>
 
 ```shell
 kubectl port-forward svc/argocd-server -n argocd 8080:443

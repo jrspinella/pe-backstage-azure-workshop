@@ -1,6 +1,6 @@
 variable "resource_group_name" {
   description = "Specifies the name of the resource group."
-  default     = "backstage"
+  default     = "rg-backstage"
   type        = string
 }
 
@@ -14,15 +14,47 @@ variable "github_token" {
 variable "location" {
   description = "Specifies the the location for the Azure resources."
   type        = string
-  default     = "eastus2"
+  default     = "usgovvirginia"
+}
+
+variable "tags" {
+  description = "Specifies tags for all the resources."
+  default = {
+    createdWith = "Terraform"
+    portal     = "Backstage"
+  }
 }
 
 # AKS Cluster
 
+variable "aks_resource_group" {
+  description = "Specifies the name of the resource group for the AKS cluster."
+  type        = string
+  default     = "rg-pe-aks-gitops"
+}
+
 variable "aks_node_resource_group" {
   description = "Specifies the name of the resource group for the AKS nodes."
   type        = string
-  default     = "aks-gitops"
+  default     = "MC_pe-aks-gitops"
+}
+
+variable "aks_name" {
+  description = "Specifies the name of the AKS cluster."
+  type        = string
+  default     = "pe-aks"
+}
+
+variable "kubconfig_path" {
+  description = "Specifies the path to the kubeconfig file."
+  type        = string
+  default     = null
+}
+
+variable "helm_release" {
+  description = "Specifies the Helm release."
+  type        = bool
+  default     = false
 }
 
 # Addons Git

@@ -31,6 +31,7 @@ terraform {
 data "azurerm_client_config" "current" {}
 
 provider "azuread" {
+  environment = "usgovernment"
   tenant_id = data.azurerm_client_config.current.tenant_id
 }
 

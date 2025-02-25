@@ -3,9 +3,9 @@
 # Resource Group: Resource
 ################################################################################
 resource "azurerm_resource_group" "this" {
-  name     = var.resource_group_name
-  location = var.location
-  tags     = "backstage"
+  name     = local.resource_group_name
+  location = local.location
+  tags     = var.tags
 }
 
 ################################################################################
@@ -13,7 +13,7 @@ resource "azurerm_resource_group" "this" {
 ################################################################################
 resource "azurerm_postgresql_flexible_server" "backstagedbserver" {
   name                          = "backstage-postgresql-server"
-  location                      = var.location
+  location                      = local.location
   public_network_access_enabled = true
   administrator_password        = var.postgres_password
   resource_group_name           = azurerm_resource_group.this.name
@@ -161,19 +161,17 @@ resource "azurerm_public_ip" "backstage_public_ip" {
 ################################################################################
 # Backstage: Service Account & Secret
 ################################################################################
-resource "kubernetes_namespace" "backstage_nammespace" {
+resource "kubernetes_namespace" "backstage_namespace" {
   metadata {
     name = "backstage"
   }
 }
 resource "kubernetes_service_account" "backstage_service_account" {
-  depends_on = [ kubernetes_namespace.backstage_nammespace ]
+  depends_on = [ kubernetes_namespace.backstage_namespace ]
   metadata {
     name      = "backstage-service-account"
-    namespace = "backstage"
-    
-  }
-  
+    namespace = "backstage"    
+  }  
 }
 
 resource "kubernetes_role" "backstage_pod_reader" {
@@ -239,11 +237,12 @@ resource "kubernetes_secret" "backstage_service_account_secret" {
 ################################################################################
 
 resource "kubernetes_secret" "tls_secret" {
-  depends_on = [kubernetes_namespace.backstage_nammespace]
+  count      = local.helm_release ? 1 : 0
+  depends_on = [kubernetes_namespace.backstage_namespace]
 
   metadata {
     name      = "my-tls-secret"
-    namespace = kubernetes_namespace.backstage_nammespace.metadata[0].name
+    namespace = kubernetes_namespace.backstage_namespace.metadata[0].name
   }
 
   type = "kubernetes.io/tls"
@@ -255,15 +254,15 @@ resource "kubernetes_secret" "tls_secret" {
 }
 
 resource "helm_release" "backstage" {
+  count      = local.helm_release ? 1 : 0
   depends_on = [ kubernetes_secret.tls_secret ]
   name       = "backstage"
-  repository = "oci://oowcontainerimages.azurecr.io/helm"
-  chart      = "backstagechart"
+  chart      = "pe-backstage-azure-workshop-1/backstage/backstagechart"
   version    = "0.1.0"
 
   set {
     name  = "image.repository"
-    value = "oowcontainerimages.azurecr.io/backstage"
+    value = "backstageacrjrs.azurecr.us/backstage"
   }
     set {
     name  = "image.tag"
@@ -271,12 +270,12 @@ resource "helm_release" "backstage" {
   }
     set {
     name  = "env.K8S_CLUSTER_NAME"
-    value = module.aks.aks_name
+    value = var.aks_name
   }
 
       set {
     name  = "env.K8S_CLUSTER_URL"
-    value = "https://${module.aks.aks_name}"
+    value = "https://pe-beoqtio7.hcp.usgovvirginia.cx.aks.containerservice.azure.us:443"
   }
 
   set {
@@ -300,7 +299,7 @@ resource "helm_release" "backstage" {
   }
   set {
     name  = "service.annotations.service\\.beta\\.kubernetes\\.io/azure-load-balancer-resource-group"
-    value = module.aks.node_resource_group
+    value = var.aks_node_resource_group
   }
 
   set {
@@ -358,11 +357,11 @@ resource "helm_release" "backstage" {
   }
     set {
     name  = "podAnnotations.backstage\\.io/kubernetes-id"
-    value = "${module.aks.aks_name}-component"
+    value = "${var.aks_name}-component"
   }
   
   set {
     name  = "labels.kubernetesId"
-    value = "${module.aks.aks_name}-component"
+    value = "${var.aks_name}-component"
   }
 }

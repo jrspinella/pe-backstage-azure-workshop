@@ -1,0 +1,7 @@
+# Sample tfvars - rename to terraform.tfvars to use
+
+# Azure region
+location = "westus3"
+
+# Resource group name
+resource_group_name = "rg-backstage"

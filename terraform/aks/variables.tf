@@ -1,14 +1,6 @@
 variable "resource_group_name" {
   description = "Specifies the name of the resource group."
-  default     = "aks-gitops"
   type        = string
-}
-
-variable "github_token" {
-  description = "Specifies the GitHub token for the GitHub repository."
-  type        = string
-  default     = ""
-  
 }
 
 variable "location" {
@@ -130,7 +122,7 @@ variable "rbac_aad" {
 variable "prefix" {
   description = "Specifies the prefix for the AKS cluster"
   type        = string
-  default     = "gitops"
+  default     = "pe"
 }
 
 variable "network_plugin" {
